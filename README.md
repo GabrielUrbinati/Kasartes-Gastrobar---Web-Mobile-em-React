@@ -1,45 +1,32 @@
-# Kasartes Gastrobar: comandas e estoque
+# Kasartes Gastrobar
 
-Web app mobile em React (Vite) com Supabase. Versão de teste com duas áreas:
+App web (mobile) de comandas e estoque pro Kasartes Gastrobar. Feito em React + Vite, com Supabase no backend e deploy na Vercel.
 
-- **Comandas**: abrir por mesa ou nome, lançar itens, observações, fechar conta com forma de pagamento, cancelar, vendido no dia.
-- **Estoque**: cadastro de produtos, entrada, saída, contagem, aviso de reposição e histórico por produto.
+Por enquanto tem só o básico:
 
-Cada item lançado numa comanda baixa o estoque sozinho (gatilho no banco); remover o item ou cancelar a comanda devolve.
+- comandas: abre por mesa ou nome, lança os itens, fecha a conta com a forma de pagamento
+- estoque: cadastro de produtos, entrada/saída/contagem e aviso quando tá acabando
 
-## 1. Banco (Supabase)
+Quando lança um item na comanda o estoque já baixa sozinho (é um trigger no banco). Se tirar o item ou cancelar a comanda, volta.
 
-Já criado: projeto `kasartes` (São Paulo), com as tabelas de `supabase/schema.sql` aplicadas.
-A URL e a chave pública estão em `.env.production`.
-
-Falta só o login da equipe: em **Authentication > Users > Add user**, crie um e-mail e senha
-(marque "Auto Confirm User"). https://supabase.com/dashboard/project/xinbzuakmyqamqhboglg/auth/users
-
-## 2. Publicar na Vercel
-
-Dentro desta pasta:
+## Rodando
 
 ```bash
-npx vercel --prod
-```
-
-Na primeira vez ele pede login e confirma a criação do projeto; aceite os padrões (Vite é detectado).
-
-## 3. Rodar no computador (opcional)
-
-```bash
-cp .env.production .env
 npm install
+cp .env.production .env
 npm run dev
 ```
 
-## Estrutura
+Precisa de um usuário criado no Supabase (Authentication > Users) pra conseguir logar.
 
-```
-src/App.jsx                  sessão, carregamento e tempo real
-src/components/Comandas.jsx  lista de comandas
-src/components/ComandaDetalhe.jsx
-src/components/Estoque.jsx   produtos e movimentações
-src/lib/api.js               todas as chamadas ao Supabase
-supabase/schema.sql          tabelas, gatilhos de estoque e RLS
-```
+O SQL das tabelas tá em `supabase/schema.sql`.
+
+## Deploy
+
+Vercel, direto do repositório. As variáveis do Supabase já estão no `.env.production`.
+
+## Falta fazer
+
+- relatório de vendas por período
+- dividir conta
+- permissões diferentes pra garçom e gerente
