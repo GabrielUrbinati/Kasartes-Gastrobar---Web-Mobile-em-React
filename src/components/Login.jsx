@@ -17,7 +17,7 @@ export default function Login() {
   }
 
   return (
-    <main className="entrada">
+    <main className="entrada com-mural">
       <img className="selo" src="/logo.png" alt="Kasartes Gastrobar" />
       <h1 className="marca">Comandas e estoque</h1>
       <form className="formulario" onSubmit={entrar}>

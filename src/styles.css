@@ -330,6 +330,7 @@ code {
 }
 
 .filtros {
+  flex: none;
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
@@ -778,4 +779,189 @@ code {
   .sheet {
     animation: none;
   }
+}
+
+/* cardápio com fotos */
+.cardapio {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 0.8rem;
+}
+
+.prato {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.prato-foto {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--ceu-claro);
+  border: 1px solid var(--linha);
+}
+
+.prato-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.prato-foto img.sem-foto {
+  width: 46%;
+  height: auto;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 50%;
+  opacity: 0.35;
+  filter: grayscale(0.4);
+}
+
+.prato > strong {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.prato-rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.prato-rodape small {
+  font-weight: 500;
+  font-size: 0.78rem;
+}
+
+.prato .contador {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+.prato.esgotado {
+  cursor: not-allowed;
+}
+
+.prato.esgotado .prato-foto img {
+  filter: grayscale(1) brightness(0.45);
+}
+
+.prato.esgotado > strong,
+.prato.esgotado .prato-rodape {
+  color: var(--nevoa);
+}
+
+.selo-esgotado {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  padding: 0.3rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--rosa);
+  background: rgba(20, 18, 26, 0.85);
+  color: var(--luar);
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* miniatura na lista do estoque */
+.miniatura {
+  flex: none;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 0.7rem;
+  object-fit: cover;
+  background: var(--ceu-claro);
+  border: 1px solid var(--linha);
+}
+
+.miniatura.sem-foto {
+  object-fit: contain;
+  padding: 0.5rem;
+  opacity: 0.5;
+}
+
+.saldo.baixo small {
+  font-weight: 600;
+}
+
+/* aviso de produto que acabou */
+.aviso-esgotado {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0.75rem 1rem 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.9rem;
+  background: #3b1a08;
+  border: 1px solid var(--brasa);
+  color: #ffe2cf;
+  font-size: 0.92rem;
+}
+
+.aviso-esgotado span {
+  flex: 1;
+}
+
+.aviso-esgotado button {
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0 0.3rem;
+}
+
+.item .passos button:disabled {
+  opacity: 0.35;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* fundo da tela de entrada: foto do mural, bem escura */
+.com-mural {
+  position: relative;
+  isolation: isolate;
+  max-width: none;
+}
+
+.com-mural::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(10, 8, 14, 0.9)),
+    url('/mural.jpg') center / cover no-repeat;
+}
+
+.com-mural > * {
+  width: 100%;
+  max-width: 21rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.com-mural > .selo {
+  width: 10.5rem;
 }

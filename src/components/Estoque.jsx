@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import * as api from '../lib/api.js'
-import { dataHora, dinheiro, estoqueBaixo, lerNumero, quantidade } from '../lib/formato.js'
+import { dataHora, dinheiro, esgotado, estoqueBaixo, lerNumero, quantidade } from '../lib/formato.js'
 import Sheet from './Sheet.jsx'
 
 const VAZIO = {
@@ -64,6 +64,7 @@ export default function Estoque({ produtos, executar }) {
           {visiveis.map((p) => (
             <li key={p.id}>
               <button className="linha" onClick={() => setProdutoId(p.id)}>
+                <img className={p.foto ? 'miniatura' : 'miniatura sem-foto'} src={p.foto || '/logo.png'} alt="" loading="lazy" />
                 <span className="linha-texto">
                   <strong>{p.nome}</strong>
                   <small>
@@ -74,8 +75,7 @@ export default function Estoque({ produtos, executar }) {
                   <span className={estoqueBaixo(p) ? 'saldo baixo' : 'saldo'}>
                     <strong>{quantidade(p.estoque_atual)}</strong>
                     <small>
-                      {p.unidade}
-                      {estoqueBaixo(p) ? ', repor' : ''}
+                      {esgotado(p) ? 'esgotado' : `${p.unidade}${estoqueBaixo(p) ? ', repor' : ''}`}
                     </small>
                   </span>
                 ) : (
@@ -149,6 +149,14 @@ function Movimentar({ produto, executar, fechar, editar }) {
       setErro('Digite uma quantidade válida, como 12 ou 2,5.')
       return
     }
+    if (tipo === 'saida' && n > Number(produto.estoque_atual)) {
+      setErro(
+        Number(produto.estoque_atual) <= 0
+          ? 'Não há nada em estoque para dar saída.'
+          : `Só restam ${quantidade(produto.estoque_atual)} ${produto.unidade} em estoque.`
+      )
+      return
+    }
     const delta = tipo === 'entrada' ? n : tipo === 'saida' ? -n : n - Number(produto.estoque_atual)
     if (delta === 0) {
       setErro('A contagem é igual ao saldo atual. Nada a ajustar.')
@@ -174,8 +182,9 @@ function Movimentar({ produto, executar, fechar, editar }) {
             {quantidade(produto.estoque_atual)} <small>{produto.unidade}</small>
           </p>
           <p className="apoio">
-            Aviso de reposição em {quantidade(produto.estoque_minimo)}
-            {estoqueBaixo(produto) ? '. Está na hora de repor.' : '.'}
+            {esgotado(produto)
+              ? 'Estoque acabou: o item fica bloqueado na comanda até uma nova entrada.'
+              : `Aviso de reposição em ${quantidade(produto.estoque_minimo)}${estoqueBaixo(produto) ? '. Está na hora de repor.' : '.'}`}
           </p>
 
           <form className="formulario" onSubmit={salvar}>

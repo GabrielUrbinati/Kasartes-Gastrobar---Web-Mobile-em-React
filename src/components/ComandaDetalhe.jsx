@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import * as api from '../lib/api.js'
-import { dataHora, dinheiro, estoqueBaixo, quantidade, totalDaComanda } from '../lib/formato.js'
+import { dataHora, dinheiro, esgotado, estoqueBaixo, quantidade, totalDaComanda } from '../lib/formato.js'
 import Sheet from './Sheet.jsx'
 
 const PAGAMENTOS = ['Pix', 'Crédito', 'Débito', 'Dinheiro']
@@ -21,8 +21,15 @@ export default function ComandaDetalhe({ comanda, produtos, executar, voltar }) 
     (p) =>
       (!categoria || p.categoria === categoria) && p.nome.toLowerCase().includes(busca.trim().toLowerCase())
   )
+  const produtoDe = (id) => produtos.find((p) => p.id === id)
   const naComanda = (produtoId) =>
     itens.filter((i) => i.produto_id === produtoId).reduce((s, i) => s + Number(i.quantidade), 0)
+
+  // o "+" da linha só vale se ainda sobra uma unidade no estoque
+  const semSaldo = (item) => {
+    const p = produtoDe(item.produto_id)
+    return Boolean(p) && esgotado(p)
+  }
 
   async function agir(acao) {
     if (ocupado) return false
@@ -75,6 +82,7 @@ export default function ComandaDetalhe({ comanda, produtos, executar, voltar }) 
                   {aberta ? `${dinheiro(i.preco_unit)} cada` : `${quantidade(i.quantidade)} × ${dinheiro(i.preco_unit)}`}
                   {i.obs ? `, ${i.obs}` : ''}
                 </small>
+                {aberta && semSaldo(i) && <small className="alerta">Acabou o estoque, não dá para somar</small>}
               </div>
               {aberta && (
                 <button className="botao-texto pequeno" onClick={() => observar(i)}>
@@ -93,7 +101,8 @@ export default function ComandaDetalhe({ comanda, produtos, executar, voltar }) 
                   <span>{quantidade(i.quantidade)}</span>
                   <button
                     aria-label={`Mais um ${i.nome}`}
-                    disabled={ocupado}
+                    title={semSaldo(i) ? 'Estoque acabou' : undefined}
+                    disabled={ocupado || semSaldo(i)}
                     onClick={() => agir(() => api.alterarQuantidade(i, Number(i.quantidade) + 1))}
                   >
                     +
@@ -156,26 +165,36 @@ export default function ComandaDetalhe({ comanda, produtos, executar, voltar }) 
                   </button>
                 ))}
               </div>
-              <ul className="lista">
+              <ul className="cardapio">
                 {visiveis.map((p) => {
                   const lancados = naComanda(p.id)
+                  const acabou = esgotado(p)
                   return (
                     <li key={p.id}>
                       <button
-                        className="linha"
-                        disabled={ocupado}
+                        className={acabou ? 'prato esgotado' : 'prato'}
+                        disabled={ocupado || acabou}
+                        aria-label={acabou ? `${p.nome}, esgotado` : `Lançar ${p.nome}`}
                         onClick={() => agir(() => api.adicionarItem(comanda, p))}
                       >
-                        <span className="linha-texto">
-                          <strong>{p.nome}</strong>
-                          <small className={estoqueBaixo(p) ? 'alerta' : ''}>
-                            {p.controla_estoque
-                              ? `${quantidade(p.estoque_atual)} em estoque`
-                              : p.categoria}
-                          </small>
+                        <span className="prato-foto">
+                          {p.foto ? (
+                            <img src={p.foto} alt="" loading="lazy" />
+                          ) : (
+                            <img className="sem-foto" src="/logo.png" alt="" />
+                          )}
+                          {acabou && <span className="selo-esgotado">Esgotado</span>}
+                          {lancados > 0 && <span className="contador">{quantidade(lancados)}</span>}
                         </span>
-                        {lancados > 0 && <span className="contador">{quantidade(lancados)}</span>}
-                        <span className="linha-valor">{dinheiro(p.preco)}</span>
+                        <strong>{p.nome}</strong>
+                        <span className="prato-rodape">
+                          <span>{dinheiro(p.preco)}</span>
+                          {p.controla_estoque && !acabou && estoqueBaixo(p) && (
+                            <small className="alerta">
+                              {Number(p.estoque_atual) === 1 ? 'Resta 1' : `Restam ${quantidade(p.estoque_atual)}`}
+                            </small>
+                          )}
+                        </span>
                       </button>
                     </li>
                   )

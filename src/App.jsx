@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { configurado, supabase } from './lib/supabase.js'
 import * as api from './lib/api.js'
-import { estoqueBaixo } from './lib/formato.js'
+import { esgotado, estoqueBaixo } from './lib/formato.js'
 import Login from './components/Login.jsx'
 import Comandas from './components/Comandas.jsx'
 import ComandaDetalhe from './components/ComandaDetalhe.jsx'
@@ -26,7 +26,7 @@ export default function App() {
 
 function SemConfiguracao() {
   return (
-    <main className="entrada">
+    <main className="entrada com-mural">
       <img className="selo" src="/logo.png" alt="Kasartes Gastrobar" />
       <h1 className="marca">Falta ligar o banco</h1>
       <p className="apoio">
@@ -45,11 +45,19 @@ function Painel({ email }) {
   const [pronto, setPronto] = useState(false)
   const [erro, setErro] = useState('')
   const [contaAberta, setContaAberta] = useState(false)
+  const [acabaram, setAcabaram] = useState([])
   const pendente = useRef(null)
+  const anteriores = useRef(null)
 
   const carregar = useCallback(async () => {
     try {
       const [p, c] = await Promise.all([api.listarProdutos(), api.listarComandas()])
+      // avisa quando um produto passa de "tem" para "acabou" (venda, saída ou outro aparelho)
+      if (anteriores.current) {
+        const novos = p.filter((x) => esgotado(x) && anteriores.current.get(x.id) >= 1).map((x) => x.nome)
+        if (novos.length) setAcabaram((a) => [...new Set([...a, ...novos])])
+      }
+      anteriores.current = new Map(p.map((x) => [x.id, Number(x.estoque_atual)]))
       setProdutos(p)
       setComandas(c)
     } catch (e) {
@@ -97,6 +105,7 @@ function Painel({ email }) {
 
   const comanda = comandas.find((c) => c.id === comandaId)
   const alertas = produtos.filter(estoqueBaixo).length
+  const zerados = produtos.filter(esgotado).length
 
   return (
     <div className="app">
@@ -112,6 +121,19 @@ function Painel({ email }) {
         <div className="aviso-erro" role="alert">
           <span>{erro}</span>
           <button onClick={() => setErro('')} aria-label="Fechar aviso">
+            ×
+          </button>
+        </div>
+      )}
+
+      {acabaram.length > 0 && (
+        <div className="aviso-esgotado" role="alert">
+          <span>
+            {acabaram.length === 1
+              ? `Acabou o estoque de ${acabaram[0]}. Ele fica bloqueado na hora de lançar.`
+              : `Acabou o estoque de ${acabaram.join(', ')}. Eles ficam bloqueados na hora de lançar.`}
+          </span>
+          <button onClick={() => setAcabaram([])} aria-label="Fechar aviso">
             ×
           </button>
         </div>
@@ -142,6 +164,7 @@ function Painel({ email }) {
           <button className={aba === 'estoque' ? 'aba ativa' : 'aba'} onClick={() => setAba('estoque')}>
             Estoque
             {alertas > 0 && <span className="contador">{alertas}</span>}
+            {zerados > 0 && <span className="sr-only">, {zerados} esgotados</span>}
           </button>
         </nav>
       )}

@@ -9,8 +9,10 @@ create table if not exists public.produtos (
   controla_estoque boolean not null default true,
   estoque_atual numeric(12,3) not null default 0,
   estoque_minimo numeric(12,3) not null default 0,
+  foto text,
   ativo boolean not null default true,
-  criado_em timestamptz not null default now()
+  criado_em timestamptz not null default now(),
+  constraint estoque_nao_negativo check (estoque_atual >= 0)
 );
 
 create table if not exists public.comandas (
@@ -51,10 +53,23 @@ create index if not exists comandas_status_idx on public.comandas (status, fecha
 create index if not exists comanda_itens_comanda_idx on public.comanda_itens (comanda_id);
 create index if not exists movimentos_produto_idx on public.movimentos_estoque (produto_id, criado_em desc);
 
--- atualiza o saldo do produto a cada movimento
+-- atualiza o saldo do produto a cada movimento e barra saldo negativo
 create or replace function public.tg_movimento_aplica_saldo()
 returns trigger language plpgsql set search_path = public as $$
+declare
+  v_saldo numeric;
+  v_nome text;
 begin
+  select estoque_atual, nome into v_saldo, v_nome
+    from produtos where id = new.produto_id for update;
+
+  if v_saldo + new.quantidade < 0 then
+    if v_saldo <= 0 then
+      raise exception 'Acabou o estoque de %.', v_nome;
+    end if;
+    raise exception 'Só restam % de % em estoque.', trim_scale(v_saldo), v_nome;
+  end if;
+
   update produtos set estoque_atual = estoque_atual + new.quantidade where id = new.produto_id;
   return null;
 end $$;
@@ -64,13 +79,16 @@ create trigger movimento_aplica_saldo
   after insert on public.movimentos_estoque
   for each row execute function public.tg_movimento_aplica_saldo();
 
--- item de comanda mexe no estoque
+-- item de comanda mexe no estoque (e nao deixa vender o que acabou)
 create or replace function public.tg_item_movimenta_estoque()
 returns trigger language plpgsql set search_path = public as $$
 declare
   v_delta numeric;
   v_produto uuid;
   v_comanda uuid;
+  v_saldo numeric;
+  v_nome text;
+  v_controla boolean;
 begin
   if tg_op = 'INSERT' then
     v_delta := -new.quantidade; v_produto := new.produto_id; v_comanda := new.comanda_id;
@@ -84,10 +102,21 @@ begin
     raise exception 'Esta comanda já foi fechada e não pode ser alterada.';
   end if;
 
-  if v_produto is not null and v_delta <> 0
-     and exists (select 1 from produtos where id = v_produto and controla_estoque) then
-    insert into movimentos_estoque (produto_id, tipo, quantidade, motivo, comanda_id)
-    values (v_produto, case when v_delta < 0 then 'venda' else 'estorno' end, v_delta, 'Comanda', v_comanda);
+  if v_produto is not null and v_delta <> 0 then
+    select estoque_atual, nome, controla_estoque into v_saldo, v_nome, v_controla
+      from produtos where id = v_produto for update;
+
+    if v_controla then
+      if v_delta < 0 and v_saldo + v_delta < 0 then
+        if v_saldo <= 0 then
+          raise exception 'Acabou o estoque de %.', v_nome;
+        end if;
+        raise exception 'Só restam % de % em estoque.', trim_scale(v_saldo), v_nome;
+      end if;
+
+      insert into movimentos_estoque (produto_id, tipo, quantidade, motivo, comanda_id)
+      values (v_produto, case when v_delta < 0 then 'venda' else 'estorno' end, v_delta, 'Comanda', v_comanda);
+    end if;
   end if;
   return null;
 end $$;
@@ -155,3 +184,8 @@ begin
     end if;
   end loop;
 end $$;
+
+-- bancos criados antes desta versao: rodar tambem
+-- alter table public.produtos add column if not exists foto text;
+-- update public.produtos set estoque_atual = 0 where estoque_atual < 0;
+-- alter table public.produtos add constraint estoque_nao_negativo check (estoque_atual >= 0);

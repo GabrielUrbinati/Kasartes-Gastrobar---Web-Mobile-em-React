@@ -34,3 +34,6 @@ export const itensDaComanda = (comanda) =>
 
 export const estoqueBaixo = (p) =>
   p.controla_estoque && Number(p.estoque_atual) <= Number(p.estoque_minimo)
+
+// sem saldo para vender nem uma unidade
+export const esgotado = (p) => p.controla_estoque && Number(p.estoque_atual) < 1
